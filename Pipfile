@@ -10,6 +10,9 @@ pandas = "*"
 flake8 = "*"
 kaggle = "*"
 jupyterlab = "*"
+tqdm = "*"
+pyarrow = "*"
+fastparquet = "*"
 
 [requires]
 python_version = "3.8"
