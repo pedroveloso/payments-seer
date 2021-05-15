@@ -1,5 +1,6 @@
+import multiprocessing
+
 import pandas as pd
-from tqdm import tqdm
 
 pd.options.mode.chained_assignment = None # Disabel warnings
 
@@ -20,7 +21,7 @@ def payment_status(days_between_payment_due_date):
 
 
 
-def get_payments_history(cash_position_df, sk_id_prev):
+def get_contract_payments_history(sk_id_prev, cash_position_df=cash_position,):
     
     loan_payments = cash_position_df[cash_position_df.SK_ID_PREV == sk_id_prev]
     loan_payments.sort_values(by=['CNT_INSTALMENT_FUTURE'], ascending=False, inplace=True)
@@ -47,19 +48,20 @@ completed_contracts = cash_position.query("NAME_CONTRACT_STATUS == 'Completed' |
                                           NAME_CONTRACT_STATUS == 'Amortized debt' | \
                                           NAME_CONTRACT_STATUS == 'Demand'")['SK_ID_PREV'].unique().tolist()
 
-final_df = pd.DataFrame()
-for contract in tqdm(completed_contracts):
-    payment_history = get_payments_history(cash_position, contract)
-    
-    if final_df.empty:
-        final_df = payment_history
-    
-    final_df = final_df.append(payment_history, ignore_index=True)
+mgr = multiprocessing.Manager()
+ns = mgr.Namespace()
+ns.final_df = pd.DataFrame()
+with multiprocessing.Pool() as pool:
 
-print(f"Final dataset has {final_df.shape[0]} rows and {final_df.shape[1]} columns")
+    print("Começando multiprocessing =)")
+
+    payment_history = pool.map(get_contract_payments_history, completed_contracts)    
+    ns.final_df = ns.final_df.append(payment_history, ignore_index=True)
+
+print(f"Final dataset has {ns.final_df.shape[0]} rows and {ns.final_df.shape[1]} columns")
 
 # Test if everything is right before writing
-if len(final_df.next_period_status.unique()) == 1:
+if len(ns.final_df.next_period_status.unique()) == 1:
     raise ValueError("Seems there is just one class in your data")
 
-final_df.to_parquet('./data/processed/final_df.parquet.gzip', compression="gzip")
+ns.final_df.to_parquet('./data/processed/final_df.parquet.gzip', compression="gzip")
