@@ -1,7 +1,6 @@
 
 import pandas as pd
-from numpy.random import seed
-from tensorflow import set_random_seed
+import numpy as np
 from tensorflow.keras.metrics import CategoricalAccuracy
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, LSTM
@@ -19,8 +18,7 @@ SEED = 409
 
 # ------------------------------------------------------------
 
-seed(SEED)
-set_random_seed(SEED)
+np.random.seed(SEED)
 
 # Load data and explore contracts size/duration
 data = pd.read_parquet('./data/processed/full_final_df.parquet.gzip')
@@ -75,5 +73,6 @@ plt.show()
 
 # Evaluate fit quality
 X_test = X_test.reshape(X_test.shape[0], X_test.shape[1], 1)
-y_pred = model.predict(X_test)
+y_pred = model.predict_classes(X_test)
+y_test=np.argmax(y_test, axis=1)
 print(classification_report(y_test, y_pred, target_names=label_encoder.classes_))
